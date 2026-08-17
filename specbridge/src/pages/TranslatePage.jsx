@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 const API_BASE_URL = 'http://localhost:3001'
 
@@ -21,12 +22,24 @@ function ResultCard({ title, children }) {
 }
 
 export default function TranslatePage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [text, setText] = useState('')
   const [category, setCategory] = useState('AI 자동 감지')
   const [level, setLevel] = useState('기본')
   const [result, setResult] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (searchParams.get('reset') === '1') {
+      setText('')
+      setCategory('AI 자동 감지')
+      setLevel('기본')
+      setResult(null)
+      setError('')
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const handleAnalyze = async () => {
     setError('')

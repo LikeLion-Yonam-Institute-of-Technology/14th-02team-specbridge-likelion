@@ -10,7 +10,7 @@ export default function Main() {
         <h1>어려운 말을 이해하기 쉽게</h1>
         <p className="lead">전문 용어를 쉽게 풀어주는 AI 기반 전공어 번역 서비스</p>
         <div className="hero-cta">
-          <Link to="/translate">
+          <Link to="/translate?reset=1">
             <Button>전문어 번역 시작</Button>
           </Link>
         </div>

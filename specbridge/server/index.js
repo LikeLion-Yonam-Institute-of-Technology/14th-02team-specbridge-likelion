@@ -9,6 +9,7 @@ dotenv.config()
 
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
+const DEFAULT_MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini'
 
 const AnalysisOutputSchema = z.object({
   category: z.string().min(1),
@@ -143,6 +144,48 @@ const getOpenAIClient = () => {
   return new OpenAI({ apiKey })
 }
 
+const buildOpenAIErrorResponse = (error, fallbackError) => {
+  const message = error instanceof Error ? error.message : fallbackError
+
+  if (
+    message.includes('OPENAI_API_KEY') ||
+    message.includes('api key') ||
+    message.includes('401') ||
+    message.includes('403')
+  ) {
+    return { status: 500, payload: { error: 'OpenAI API 키가 누락되었거나 유효하지 않습니다.' } }
+  }
+
+  return { status: 500, payload: { error: fallbackError } }
+}
+
+const createStructuredResponse = async ({ schema, systemPrompt, userText, outputName }) => {
+  const client = getOpenAIClient()
+
+  const response = await client.responses.parse({
+    model: DEFAULT_MODEL,
+    input: [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: userText,
+      },
+    ],
+    text: {
+      format: zodTextFormat(schema, outputName),
+    },
+  })
+
+  if (!response.output_parsed) {
+    throw new Error('OpenAI 응답을 파싱할 수 없습니다.')
+  }
+
+  return schema.parse(response.output_parsed)
+}
+
 // Middleware
 app.use(cors())
 app.use(express.json())
@@ -164,30 +207,12 @@ app.post('/api/analyze', async (req, res) => {
     const selectedCategory = normalizeCategory(category)
     const selectedLevel = normalizeLevel(level)
 
-    const client = getOpenAIClient()
-
-    const response = await client.responses.parse({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      input: [
-        {
-          role: 'system',
-          content: buildSystemPrompt(selectedCategory, selectedLevel),
-        },
-        {
-          role: 'user',
-          content: `분석할 문장:\n${text.trim()}`,
-        },
-      ],
-      text: {
-        format: zodTextFormat(AnalysisOutputSchema, 'analysis_result'),
-      },
+    const parsed = await createStructuredResponse({
+      schema: AnalysisOutputSchema,
+      systemPrompt: buildSystemPrompt(selectedCategory, selectedLevel),
+      userText: `분석할 문장:\n${text.trim()}`,
+      outputName: 'analysis_result',
     })
-
-    if (!response.output_parsed) {
-      throw new Error('OpenAI 응답을 파싱할 수 없습니다.')
-    }
-
-    const parsed = AnalysisOutputSchema.parse(response.output_parsed)
 
     return res.json({
       category: parsed.category,
@@ -197,23 +222,8 @@ app.post('/api/analyze', async (req, res) => {
     })
   } catch (error) {
     console.error('Error in /api/analyze:', error)
-
-    const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
-
-    if (
-      message.includes('OPENAI_API_KEY') ||
-      message.includes('api key') ||
-      message.includes('401') ||
-      message.includes('403')
-    ) {
-      return res.status(500).json({
-        error: 'OpenAI API 키가 누락되었거나 유효하지 않습니다.',
-      })
-    }
-
-    return res.status(500).json({
-      error: '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-    })
+    const result = buildOpenAIErrorResponse(error, '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    return res.status(result.status).json(result.payload)
   }
 })
 
@@ -225,30 +235,12 @@ app.post('/api/meeting-summary', async (req, res) => {
       return res.status(400).json({ error: '회의 내용을 입력해주세요.' })
     }
 
-    const client = getOpenAIClient()
-
-    const response = await client.responses.parse({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      input: [
-        {
-          role: 'system',
-          content: buildMeetingSummaryPrompt(),
-        },
-        {
-          role: 'user',
-          content: `회의 내용:\n${text.trim()}`,
-        },
-      ],
-      text: {
-        format: zodTextFormat(MeetingSummarySchema, 'meeting_summary_result'),
-      },
+    const parsed = await createStructuredResponse({
+      schema: MeetingSummarySchema,
+      systemPrompt: buildMeetingSummaryPrompt(),
+      userText: `회의 내용:\n${text.trim()}`,
+      outputName: 'meeting_summary_result',
     })
-
-    if (!response.output_parsed) {
-      throw new Error('OpenAI 응답을 파싱할 수 없습니다.')
-    }
-
-    const parsed = MeetingSummarySchema.parse(response.output_parsed)
 
     return res.json({
       summary: parsed.summary,
@@ -260,23 +252,8 @@ app.post('/api/meeting-summary', async (req, res) => {
     })
   } catch (error) {
     console.error('Error in /api/meeting-summary:', error)
-
-    const message = error instanceof Error ? error.message : '회의 요약 중 오류가 발생했습니다.'
-
-    if (
-      message.includes('OPENAI_API_KEY') ||
-      message.includes('api key') ||
-      message.includes('401') ||
-      message.includes('403')
-    ) {
-      return res.status(500).json({
-        error: 'OpenAI API 키가 누락되었거나 유효하지 않습니다.',
-      })
-    }
-
-    return res.status(500).json({
-      error: '회의 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-    })
+    const result = buildOpenAIErrorResponse(error, '회의 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    return res.status(result.status).json(result.payload)
   }
 })
 

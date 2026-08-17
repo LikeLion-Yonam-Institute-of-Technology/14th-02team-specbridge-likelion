@@ -3,7 +3,7 @@ import Logo from './Logo'
 import { NavLink } from 'react-router-dom'
 
 const items = [
-  { to: '/', label: '새 분석' },
+  { to: '/translate?reset=1', label: '새 분석' },
   { to: '/translate', label: '전문어 번역' },
   { to: '/meeting', label: '회의 요약' },
   { to: '/proposal', label: '기획안 요약' },
