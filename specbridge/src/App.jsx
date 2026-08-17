@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import TranslatePage from './pages/TranslatePage'
 import MeetingPage from './pages/MeetingPage'
 import ProposalPage from './pages/ProposalPage'
+import SettingsPage from './pages/SettingsPage'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/translate" element={<TranslatePage />} />
           <Route path="/meeting" element={<MeetingPage />} />
           <Route path="/proposal" element={<ProposalPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </div>
     </BrowserRouter>

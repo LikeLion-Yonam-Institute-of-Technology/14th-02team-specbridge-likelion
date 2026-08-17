@@ -2,6 +2,55 @@ import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 const API_BASE_URL = 'http://localhost:3001'
+const STORAGE_KEY = 'specbridge-settings'
+
+const DEFAULT_SETTINGS = {
+  level: '기본',
+  defaultCategory: 'AI 자동 감지',
+  showTermDescription: true,
+  showEasySentence: true,
+  showActions: true,
+}
+
+const normalizeCategoryForSelect = (value) => {
+  if (value === '개발·IT' || value === '개발 · IT') return '개발 · IT'
+  if (value === '기획·PM' || value === '기획 · PM') return '기획 · PM'
+  if (value === '디자인·UI·UX' || value === '디자인 · UI/UX') return '디자인 · UI/UX'
+  return 'AI 자동 감지'
+}
+
+const normalizeLevelForSelect = (value) => {
+  if (value === '간단' || value === '간단하게') return '간단하게'
+  if (value === '자세히' || value === '자세하게') return '자세하게'
+  return '기본'
+}
+
+const getStoredSettings = () => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SETTINGS
+  }
+
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    if (!saved) {
+      return DEFAULT_SETTINGS
+    }
+
+    const parsed = JSON.parse(saved)
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      level: normalizeLevelForSelect(parsed.level ?? DEFAULT_SETTINGS.level),
+      defaultCategory: normalizeCategoryForSelect(parsed.defaultCategory ?? DEFAULT_SETTINGS.defaultCategory),
+      showTermDescription: parsed.showTermDescription !== false,
+      showEasySentence: parsed.showEasySentence !== false,
+      showActions: parsed.showActions !== false,
+    }
+  } catch (error) {
+    console.error('설정 불러오기 실패:', error)
+    return DEFAULT_SETTINGS
+  }
+}
 
 function TermCard({ term, description }) {
   return (
@@ -24,17 +73,34 @@ function ResultCard({ title, children }) {
 export default function TranslatePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [text, setText] = useState('')
-  const [category, setCategory] = useState('AI 자동 감지')
-  const [level, setLevel] = useState('기본')
+  const [settings, setSettings] = useState(() => getStoredSettings())
+  const [category, setCategory] = useState(() => normalizeCategoryForSelect(getStoredSettings().defaultCategory))
+  const [level, setLevel] = useState(() => normalizeLevelForSelect(getStoredSettings().level))
   const [result, setResult] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const syncSettings = () => {
+      const nextSettings = getStoredSettings()
+      setSettings(nextSettings)
+      setCategory(normalizeCategoryForSelect(nextSettings.defaultCategory))
+      setLevel(normalizeLevelForSelect(nextSettings.level))
+    }
+
+    window.addEventListener('storage', syncSettings)
+    return () => {
+      window.removeEventListener('storage', syncSettings)
+    }
+  }, [])
+
+  useEffect(() => {
     if (searchParams.get('reset') === '1') {
+      const nextSettings = getStoredSettings()
+      setSettings(nextSettings)
       setText('')
-      setCategory('AI 자동 감지')
-      setLevel('기본')
+      setCategory(normalizeCategoryForSelect(nextSettings.defaultCategory))
+      setLevel(normalizeLevelForSelect(nextSettings.level))
       setResult(null)
       setError('')
       setSearchParams({}, { replace: true })
@@ -86,6 +152,8 @@ export default function TranslatePage() {
     setResult(null)
     setError('')
   }
+
+  const { showTermDescription, showEasySentence, showActions } = settings
 
   return (
     <div className="main">
@@ -157,26 +225,32 @@ UI는 괜찮지만 UX 개선이 필요합니다.`}
                 <div className="badge">{result.category}</div>
               </ResultCard>
 
-              <div style={{ gridColumn: '1 / -1' }}>
-                <h3 className="result-section-title">전문용어</h3>
-                <div className="terms">
-                  {result.terms.map((t) => (
-                    <TermCard key={t.term} term={t.term} description={t.description} />
-                  ))}
+              {showTermDescription && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h3 className="result-section-title">전문용어</h3>
+                  <div className="terms">
+                    {result.terms.map((t) => (
+                      <TermCard key={t.term} term={t.term} description={t.description} />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <ResultCard title="쉬운 설명">
-                <p className="easy">{result.easySentence}</p>
-              </ResultCard>
+              {showEasySentence && (
+                <ResultCard title="쉬운 설명">
+                  <p className="easy">{result.easySentence}</p>
+                </ResultCard>
+              )}
 
-              <ResultCard title="해야 할 일">
-                <ul className="action-list">
-                  {result.actions.map((a) => (
-                    <li key={a}>{a}</li>
-                  ))}
-                </ul>
-              </ResultCard>
+              {showActions && (
+                <ResultCard title="해야 할 일">
+                  <ul className="action-list">
+                    {result.actions.map((a) => (
+                      <li key={a}>{a}</li>
+                    ))}
+                  </ul>
+                </ResultCard>
+              )}
             </div>
           </>
         )}
