@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-
-const API_BASE_URL = 'http://localhost:3001'
+import { buildMockMeetingSummary } from '../utils/mockMeeting'
 
 function ResultCard({ title, children }) {
   return (
@@ -41,22 +40,9 @@ export default function MeetingPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/meeting-summary`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: text.trim(),
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || '회의 요약 요청이 실패했습니다.')
-      }
-
-      const data = await response.json()
+      // Mock analysis: simulate a short delay and return fake structured result
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      const data = buildMockMeetingSummary(text)
       setResult(data)
     } catch (err) {
       console.error('회의 분석 오류:', err)

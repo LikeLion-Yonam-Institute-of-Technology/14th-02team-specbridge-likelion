@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { buildMockAnalysis, MOCK_ANALYSIS_RESULT } from '../utils/mockAnalysis'
 
-const API_BASE_URL = 'http://localhost:3001'
 const STORAGE_KEY = 'specbridge-settings'
 
 const DEFAULT_SETTINGS = {
@@ -51,6 +51,8 @@ const getStoredSettings = () => {
     return DEFAULT_SETTINGS
   }
 }
+
+
 
 function TermCard({ term, description }) {
   return (
@@ -109,36 +111,18 @@ export default function TranslatePage() {
 
   const handleAnalyze = async () => {
     setError('')
-    
-    // 입력 검증
+
     if (!text.trim()) {
       setError('분석할 내용을 입력해주세요.')
       return
     }
 
-    // 로딩 상태 시작
     setIsLoading(true)
-    
+
     try {
-      // 백엔드 API 호출
-      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: text.trim(),
-          category: category === 'AI 자동 감지' ? 'auto' : category,
-          level: level,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('API 응답 실패')
-      }
-
-      const data = await response.json()
-      setResult(data)
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      const mockResult = buildMockAnalysis(text, category, level)
+      setResult(mockResult)
     } catch (err) {
       console.error('분석 요청 오류:', err)
       setError('분석 중 오류가 발생했습니다.')

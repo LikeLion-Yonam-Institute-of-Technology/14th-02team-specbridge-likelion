@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd C:\\\\Users\\\\kimhu\\\\LION-FirstTime\\\\specbridge; npm run lint; if \\(\\$LASTEXITCODE -ne 0\\) \\{ exit \\$LASTEXITCODE \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
