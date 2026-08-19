@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { buildMockAnalysis, MOCK_ANALYSIS_RESULT } from '../utils/mockAnalysis'
 
 const STORAGE_KEY = 'specbridge-settings'
 
@@ -120,9 +119,33 @@ export default function TranslatePage() {
     setIsLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600))
-      const mockResult = buildMockAnalysis(text, category, level)
-      setResult(mockResult)
+      // call backend translate API
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      const payload = {
+        text: text.trim(),
+        category: category === 'AI 자동 감지' ? 'auto' : category,
+        level: (function mapLevel(l) {
+          if (l === '간단하게') return 'simple'
+          if (l === '자세하게') return 'detail'
+          return 'basic'
+        })(level),
+      }
+
+      const res = await fetch('http://localhost:3001/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        const message = (body && body.error) || '서버 응답 오류'
+        throw new Error(message)
+      }
+
+      const json = await res.json()
+      setResult(json)
     } catch (err) {
       console.error('분석 요청 오류:', err)
       setError('분석 중 오류가 발생했습니다.')

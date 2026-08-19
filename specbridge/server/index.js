@@ -195,6 +195,64 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+// Translate (mock) endpoint - forwards request to server-side mockAnalysis
+import { buildMockAnalysis } from './mockAnalysis.js'
+import { buildMockMeetingSummary } from './mockMeeting.js'
+import { buildMockProposalAnalysis } from './mockProposal.js'
+
+app.post('/api/translate', (req, res) => {
+  try {
+    const { text, category, level } = req.body ?? {}
+
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: '텍스트를 입력해주세요.' })
+    }
+
+    const selectedCategory = category || 'auto'
+    const selectedLevel = (level || 'basic').toLowerCase()
+
+    const result = buildMockAnalysis(text, selectedCategory, selectedLevel)
+    return res.json(result)
+  } catch (err) {
+    console.error('Error in /api/translate:', err)
+    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+  }
+})
+
+// Meeting endpoint - server-side mock
+app.post('/api/meeting', (req, res) => {
+  try {
+    const { text } = req.body ?? {}
+
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: '회의 내용을 입력해주세요.' })
+    }
+
+    const result = buildMockMeetingSummary(text)
+    return res.json(result)
+  } catch (err) {
+    console.error('Error in /api/meeting:', err)
+    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+  }
+})
+
+// Proposal endpoint - server-side mock
+app.post('/api/proposal', (req, res) => {
+  try {
+    const { text } = req.body ?? {}
+
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: '분석할 기획안을 입력해주세요.' })
+    }
+
+    const result = buildMockProposalAnalysis(text)
+    return res.json(result)
+  } catch (err) {
+    console.error('Error in /api/proposal:', err)
+    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+  }
+})
+
 // Analysis endpoint
 app.post('/api/analyze', async (req, res) => {
   try {

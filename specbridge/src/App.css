@@ -87,6 +87,13 @@ button,textarea,select,input{font:inherit}
 .controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;max-width:1000px}
 .control{display:flex;flex-direction:column;min-width:180px}
 .control select{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fff}
+
+/* Ensure select and option text in Translate page are visible (black) */
+.translate-page .control select,
+.translate-page .control select option{
+  color:#0f1724; /* dark text for options and selected value */
+}
+
 .radio-group{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .radio-group label{display:inline-flex;align-items:center;gap:6px;color:var(--secondary)}
 .action{margin-left:auto}

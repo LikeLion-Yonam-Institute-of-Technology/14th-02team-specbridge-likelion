@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { buildMockMeetingSummary } from '../utils/mockMeeting'
 
 function ResultCard({ title, children }) {
   return (
@@ -40,10 +39,23 @@ export default function MeetingPage() {
     setIsLoading(true)
 
     try {
-      // Mock analysis: simulate a short delay and return fake structured result
-      await new Promise((resolve) => setTimeout(resolve, 600))
-      const data = buildMockMeetingSummary(text)
-      setResult(data)
+      // call backend meeting API
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      const res = await fetch('http://localhost:3001/api/meeting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        const message = (body && body.error) || '서버 응답 오류'
+        throw new Error(message)
+      }
+
+      const json = await res.json()
+      setResult(json)
     } catch (err) {
       console.error('회의 분석 오류:', err)
       setError(err.message || '회의 요약 중 오류가 발생했습니다.')

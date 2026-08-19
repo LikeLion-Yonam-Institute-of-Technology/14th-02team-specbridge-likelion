@@ -1,29 +1,5 @@
 import React, { useState } from 'react'
 
-const MOCK_RESULT = {
-  summary: '전문용어와 복잡한 업무 내용을 쉬운 언어로 바꿔주는 AI 서비스',
-  problem: '서로 다른 전공자가 협업할 때 전문용어 때문에 발생하는 이해 격차',
-  users: ['비전공자', '초보 개발자', '대학생', '프로젝트 팀원'],
-  features: [
-    '전문용어 탐지',
-    '전문용어 쉬운 설명',
-    '문장 쉬운 번역',
-    '회의 요약',
-    '기획안 요약',
-  ],
-  flow: [
-    '사용자가 내용을 입력',
-    '분석 시작',
-    '전문 내용 분석',
-    '쉬운 설명 및 요약 제공',
-  ],
-  tech: ['React', 'Node.js', 'AI API'],
-  questions: [
-    '사용자 타겟 범위가 넓음',
-    '분석 가능한 입력 길이 기준이 없음',
-    'AI 분석 실패 시 처리 방식 정의 필요',
-  ],
-}
 
 function ResultCard({ title, children }) {
   return (
@@ -51,8 +27,22 @@ export default function ProposalPage() {
     setIsLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setResult(MOCK_RESULT)
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      const res = await fetch('http://localhost:3001/api/proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        const message = (body && body.error) || '서버 응답 오류'
+        throw new Error(message)
+      }
+
+      const json = await res.json()
+      setResult(json)
     } finally {
       setIsLoading(false)
     }
