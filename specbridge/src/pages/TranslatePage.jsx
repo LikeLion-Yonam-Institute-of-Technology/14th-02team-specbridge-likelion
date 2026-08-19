@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+
 const STORAGE_KEY = 'specbridge-settings'
 
 const DEFAULT_SETTINGS = {
@@ -132,7 +134,7 @@ export default function TranslatePage() {
         })(level),
       }
 
-      const res = await fetch('http://localhost:3001/api/translate', {
+      const res = await fetch(`${API_BASE}/api/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

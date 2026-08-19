@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+
 
 function ResultCard({ title, children }) {
   return (
@@ -29,7 +31,7 @@ export default function ProposalPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 200))
 
-      const res = await fetch('http://localhost:3001/api/proposal', {
+      const res = await fetch(`${API_BASE}/api/proposal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() }),
