@@ -200,7 +200,7 @@ import { buildMockAnalysis } from './mockAnalysis.js'
 import { buildMockMeetingSummary } from './mockMeeting.js'
 import { buildMockProposalAnalysis } from './mockProposal.js'
 
-app.post('/api/translate', (req, res) => {
+app.post('/api/translate', async (req, res) => {
   try {
     const { text, category, level } = req.body ?? {}
 
@@ -208,14 +208,36 @@ app.post('/api/translate', (req, res) => {
       return res.status(400).json({ error: '텍스트를 입력해주세요.' })
     }
 
-    const selectedCategory = category || 'auto'
-    const selectedLevel = (level || 'basic').toLowerCase()
+    const selectedCategory = normalizeCategory(category)
+    const selectedLevel = normalizeLevel(level)
 
-    const result = buildMockAnalysis(text, selectedCategory, selectedLevel)
-    return res.json(result)
-  } catch (err) {
-    console.error('Error in /api/translate:', err)
-    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+    // Use OpenAI Responses API to build a structured analysis
+    const parsed = await createStructuredResponse({
+      schema: AnalysisOutputSchema,
+      systemPrompt: buildSystemPrompt(selectedCategory, selectedLevel),
+      userText: `분석할 문장:\n${text.trim()}`,
+      outputName: 'analysis_result',
+    })
+
+    // Map results to include both description (legacy) and simple (requested)
+    const terms = (parsed.terms || []).map((t) => ({
+      term: t.term,
+      description: t.description,
+      simple: t.description,
+    }))
+
+    return res.json({
+      category: parsed.category,
+      terms,
+      easySentence: parsed.easySentence,
+      actions: parsed.actions || [],
+    })
+  } catch (error) {
+    console.error('Error in /api/translate:', error)
+    const result = buildOpenAIErrorResponse(error, '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    // Do not leak internal details to users; use generic message for client
+    const clientMessage = { error: '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+    return res.status(result.status).json(result.payload && result.payload.error ? clientMessage : { error: '서버 오류' })
   }
 })
 
