@@ -1,0 +1,6 @@
+com\specbridge\backend\controller\HealthController.class
+com\specbridge\backend\dto\HealthResponse.class
+com\specbridge\backend\SpecbridgeBackendApplication.class
+com\specbridge\backend\config\GlobalCorsConfig$1.class
+com\specbridge\backend\config\GlobalCorsConfig.class
+com\specbridge\backend\service\HealthService.class

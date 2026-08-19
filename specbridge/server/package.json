@@ -6,8 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
-  },
+    "dev": "node --watch index.js",
+        "prebuild": "node -e \"console.log('Prebuild: backend has no build step (no-op)')\"",
+        "build": "node -e \"console.log('Backend does not require a build step')\""
+      },
   "keywords": [],
   "author": "",
   "license": "MIT",
