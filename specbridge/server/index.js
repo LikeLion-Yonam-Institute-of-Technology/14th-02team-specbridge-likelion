@@ -55,6 +55,43 @@ const MeetingSummarySchema = z.object({
   questions: z.array(z.string()).default([]),
 })
 
+// Proposal schema
+const ProposalSchema = z.object({
+  summary: z.string().min(1),
+  problem: z.string().min(1),
+  users: z.array(z.string()).default([]),
+  features: z.array(z.string()).default([]),
+  flow: z.array(z.string()).default([]),
+  tech: z.array(z.string()).default([]),
+  questions: z.array(z.string()).default([]),
+  gaps: z.array(z.string()).default([]),
+})
+
+const buildProposalPrompt = () => `당신은 한국어로 기획서를 검토하고 요약하는 전문가입니다.
+- 반드시 JSON 형식으로만 응답하세요.
+- 사용자가 입력한 기획안 내용에서 명확히 드러난 정보만 사용하세요. 임의로 사실을 만들지 마세요.
+- 다음 항목을 작성하세요:
+  - summary: 프로젝트를 한 줄로 간결하게 설명
+  - problem: 해결하려는 문제를 구체적으로 기술
+  - users: 주요 사용자(대상)를 나열
+  - features: 핵심 기능들을 항목화
+  - flow: 서비스 사용 흐름(단계별)
+  - tech: 필요 기술 스택(예: React, Node.js 등)
+  - questions: 추가로 확인이 필요한 사항
+  - gaps: 기획서에서 부족하거나 빠져 있는 요구사항을 구체적으로 지적(예: 인증/권한, 데이터 소스 명시부족, 성능 요구 불명확 등)
+- gaps는 단순 문구보다 어떻게 개선할지에 대한 구체적 권장사항을 포함하세요.
+- 최종 결과는 아래 구조를 정확히 따라야 합니다:
+{
+  "summary": "프로젝트 한 줄 설명",
+  "problem": "해결하려는 문제",
+  "users": ["주요 사용자"],
+  "features": ["핵심 기능"],
+  "flow": ["단계별 흐름"],
+  "tech": ["필요 기술"],
+  "questions": ["추가로 확인할 사항"],
+  "gaps": ["구체적 부족/불확실 항목 및 권장 개선안"]
+}`
+
 const normalizeCategory = (categoryValue) => {
   if (typeof categoryValue !== 'string') {
     return 'auto'
@@ -241,8 +278,8 @@ app.post('/api/translate', async (req, res) => {
   }
 })
 
-// Meeting endpoint - server-side mock
-app.post('/api/meeting', (req, res) => {
+// Meeting endpoint - use OpenAI Responses API to produce structured meeting summary
+app.post('/api/meeting', async (req, res) => {
   try {
     const { text } = req.body ?? {}
 
@@ -250,16 +287,31 @@ app.post('/api/meeting', (req, res) => {
       return res.status(400).json({ error: '회의 내용을 입력해주세요.' })
     }
 
-    const result = buildMockMeetingSummary(text)
-    return res.json(result)
-  } catch (err) {
-    console.error('Error in /api/meeting:', err)
-    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+    const parsed = await createStructuredResponse({
+      schema: MeetingSummarySchema,
+      systemPrompt: buildMeetingSummaryPrompt(),
+      userText: `회의 내용:\n${text.trim()}`,
+      outputName: 'meeting_summary_result',
+    })
+
+    return res.json({
+      summary: parsed.summary,
+      decisions: parsed.decisions ?? [],
+      tasks: parsed.tasks ?? [],
+      schedules: parsed.schedules ?? [],
+      terms: parsed.terms ?? [],
+      questions: parsed.questions ?? [],
+    })
+  } catch (error) {
+    console.error('Error in /api/meeting:', error)
+    const result = buildOpenAIErrorResponse(error, '회의 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    const clientMessage = { error: '회의 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+    return res.status(result.status).json(result.payload && result.payload.error ? clientMessage : { error: '서버 오류' })
   }
 })
 
-// Proposal endpoint - server-side mock
-app.post('/api/proposal', (req, res) => {
+// Proposal endpoint - use OpenAI Responses API to produce structured proposal analysis
+app.post('/api/proposal', async (req, res) => {
   try {
     const { text } = req.body ?? {}
 
@@ -267,11 +319,28 @@ app.post('/api/proposal', (req, res) => {
       return res.status(400).json({ error: '분석할 기획안을 입력해주세요.' })
     }
 
-    const result = buildMockProposalAnalysis(text)
-    return res.json(result)
-  } catch (err) {
-    console.error('Error in /api/proposal:', err)
-    return res.status(500).json({ error: '서버 내부 오류가 발생했습니다.' })
+    const parsed = await createStructuredResponse({
+      schema: ProposalSchema,
+      systemPrompt: buildProposalPrompt(),
+      userText: `기획안 내용:\n${text.trim()}`,
+      outputName: 'proposal_result',
+    })
+
+    return res.json({
+      summary: parsed.summary,
+      problem: parsed.problem,
+      users: parsed.users ?? [],
+      features: parsed.features ?? [],
+      flow: parsed.flow ?? [],
+      tech: parsed.tech ?? [],
+      questions: parsed.questions ?? [],
+      gaps: parsed.gaps ?? [],
+    })
+  } catch (error) {
+    console.error('Error in /api/proposal:', error)
+    const result = buildOpenAIErrorResponse(error, '기획안 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    const clientMessage = { error: '기획안 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+    return res.status(result.status).json(result.payload && result.payload.error ? clientMessage : { error: '서버 오류' })
   }
 })
 
