@@ -82,23 +82,23 @@ export default function MeetingPage() {
       <section className="translate-page">
         {!result ? (
           <>
-            <div className="input-area">
+            <div className="input-card">
+              <label className="label">회의 내용</label>
               <textarea
-                className="textarea"
+                className="textarea large"
                 rows={8}
                 placeholder="회의 내용이나 회의록을 입력해주세요."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 disabled={isLoading}
               />
-              {error && <div className="error-message">{error}</div>}
-            </div>
-
-            <div className="controls">
-              <div className="control action" style={{ width: '100%' }}>
-                <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>
-                  {isLoading ? '분석 중...' : '회의 분석하기'}
-                </button>
+              <div className="input-footer">
+                <div className="char-count">{text.length} 자</div>
+                {error && <div className="error-message">{error}</div>}
+                <div className="analyze-area">
+                  <div className="loading-note">{isLoading ? '회의 내용을 분석하고 있습니다...' : ''}</div>
+                  <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>{isLoading ? '✨ 분석 중...' : '✨ AI로 분석하기'}</button>
+                </div>
               </div>
             </div>
           </>

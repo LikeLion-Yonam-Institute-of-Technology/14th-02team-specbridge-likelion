@@ -3,9 +3,9 @@ import React, { useState } from 'react'
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
 
-function ResultCard({ title, children }) {
+function ResultCard({ title, children, className = '' }) {
   return (
-    <div className="result-card">
+    <div className={`result-card ${className}`}>
       <h4 className="result-card-title">{title}</h4>
       {children}
     </div>
@@ -66,23 +66,23 @@ export default function ProposalPage() {
       <section className="translate-page">
         {!result ? (
           <>
-            <div className="input-area">
+            <div className="input-card">
+              <label className="label">기획안 내용</label>
               <textarea
-                className="textarea"
+                className="textarea large"
                 rows={8}
                 placeholder="분석할 기획안이나 프로젝트 내용을 입력해주세요."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 disabled={isLoading}
               />
-              {error && <div className="error-message">{error}</div>}
-            </div>
-
-            <div className="controls">
-              <div className="control action" style={{ width: '100%' }}>
-                <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>
-                  {isLoading ? '분석 중...' : '기획안 분석하기'}
-                </button>
+              <div className="input-footer">
+                <div className="char-count">{text.length} 자</div>
+                {error && <div className="error-message">{error}</div>}
+                <div className="analyze-area">
+                  <div className="loading-note">{isLoading ? '기획안을 분석하고 있습니다...' : ''}</div>
+                  <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>{isLoading ? '✨ 분석 중...' : '✨ AI로 분석하기'}</button>
+                </div>
               </div>
             </div>
           </>
@@ -133,7 +133,7 @@ export default function ProposalPage() {
                 </ul>
               </ResultCard>
 
-              <ResultCard title="확인이 필요한 부분">
+              <ResultCard title="확인이 필요한 부분" className="warning-card">
                 <ul className="action-list">
                   {result.questions.map((question) => (
                     <li key={question}>{question}</li>

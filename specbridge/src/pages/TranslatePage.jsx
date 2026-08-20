@@ -162,6 +162,11 @@ export default function TranslatePage() {
     setError('')
   }
 
+  const handleInsertExample = () => {
+    const example = '외부 API에서 사용자 데이터를 받아 백엔드 서버에서 가공한 뒤 프론트엔드 화면에 표시해주세요. UI는 괜찮지만 회원가입 과정의 UX는 개선이 필요합니다.'
+    setText(example)
+  }
+
   const { showTermDescription, showEasySentence, showActions } = settings
 
   return (
@@ -174,52 +179,55 @@ export default function TranslatePage() {
       <section className="translate-page">
         {!result ? (
           <>
-            <div className="input-area">
-              <label className="label">분석할 텍스트</label>
-              <textarea
-                className="textarea"
-                rows={6}
-                placeholder={`분석할 문장이나 대화 내용을 입력해주세요.
+            <div className="input-card">
+              <div className="options-row">
+                <div className="option-inline">
+                  <label className="label">분야</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={isLoading}>
+                    <option>AI 자동 감지</option>
+                    <option>개발 · IT</option>
+                    <option>기획 · PM</option>
+                    <option>디자인 · UI/UX</option>
+                  </select>
+                </div>
 
-예시:
-API를 받아 서버에서 처리하고 프론트에서 렌더링하면 됩니다.
-UI는 괜찮지만 UX 개선이 필요합니다.`}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
-              {error && <div className="error-message">{error}</div>}
-            </div>
+                <div className="option-inline">
+                  <label className="label">설명 수준</label>
+                  <div className="radio-group compact">
+                    <label>
+                      <input type="radio" name="level" value="간단하게" checked={level === '간단하게'} onChange={() => setLevel('간단하게')} disabled={isLoading} /> 간단하게
+                    </label>
+                    <label>
+                      <input type="radio" name="level" value="기본" checked={level === '기본'} onChange={() => setLevel('기본')} disabled={isLoading} /> 기본
+                    </label>
+                    <label>
+                      <input type="radio" name="level" value="자세하게" checked={level === '자세하게'} onChange={() => setLevel('자세하게')} disabled={isLoading} /> 자세하게
+                    </label>
+                  </div>
+                </div>
 
-            <div className="controls">
-              <div className="control">
-                <label className="label">분야</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={isLoading}>
-                  <option>AI 자동 감지</option>
-                  <option>개발 · IT</option>
-                  <option>기획 · PM</option>
-                  <option>디자인 · UI/UX</option>
-                </select>
-              </div>
-
-              <div className="control">
-                <label className="label">설명 수준</label>
-                <div className="radio-group">
-                  <label>
-                    <input type="radio" name="level" value="간단하게" checked={level === '간단하게'} onChange={() => setLevel('간단하게')} disabled={isLoading} /> 간단하게
-                  </label>
-                  <label>
-                    <input type="radio" name="level" value="기본" checked={level === '기본'} onChange={() => setLevel('기본')} disabled={isLoading} /> 기본
-                  </label>
-                  <label>
-                    <input type="radio" name="level" value="자세하게" checked={level === '자세하게'} onChange={() => setLevel('자세하게')} disabled={isLoading} /> 자세하게
-                  </label>
+                <div className="option-inline actions-inline">
+                  <button className="btn-ghost" type="button" onClick={handleInsertExample} disabled={isLoading}>예시 입력</button>
                 </div>
               </div>
 
-              <div className="control action">
-                <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>
-                  {isLoading ? '분석 중...' : '분석하기'}
-                </button>
+              <label className="label">분석할 텍스트</label>
+              <textarea
+                className="textarea large"
+                rows={8}
+                placeholder={`예: 외부 API에서 사용자 데이터를 받아 백엔드 서버에서 가공한 뒤 프론트엔드 화면에 표시해주세요. UI는 괜찮지만 회원가입 과정의 UX는 개선이 필요합니다.`}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={isLoading}
+              />
+
+              <div className="input-footer">
+                <div className="char-count">{text.length} 자</div>
+                {error && <div className="error-message">{error}</div>}
+                <div className="analyze-area">
+                  <div className="loading-note">{isLoading ? '내용을 분석하고 있습니다... 전문용어와 문맥을 파악하는 중입니다.' : ''}</div>
+                  <button className="btn-primary" onClick={handleAnalyze} disabled={isLoading}>{isLoading ? '✨ 분석 중...' : '✨ AI로 분석하기'}</button>
+                </div>
               </div>
             </div>
           </>
@@ -234,9 +242,15 @@ UI는 괜찮지만 UX 개선이 필요합니다.`}
                 <div className="badge">{result.category}</div>
               </ResultCard>
 
-              {showTermDescription && (
+              {showEasySentence && (
+                <ResultCard title="쉽게 말하면">
+                  <p className="easy">{result.easySentence}</p>
+                </ResultCard>
+              )}
+
+              {showTermDescription && result.terms && result.terms.length > 0 && (
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <h3 className="result-section-title">전문용어</h3>
+                  <h3 className="result-section-title">발견된 전문용어 <span className="term-count">{result.terms.length}개</span></h3>
                   <div className="terms">
                     {result.terms.map((t) => (
                       <TermCard key={t.term} term={t.term} description={t.description} />
@@ -245,19 +259,31 @@ UI는 괜찮지만 UX 개선이 필요합니다.`}
                 </div>
               )}
 
-              {showEasySentence && (
-                <ResultCard title="쉬운 설명">
-                  <p className="easy">{result.easySentence}</p>
-                </ResultCard>
-              )}
-
               {showActions && (
-                <ResultCard title="해야 할 일">
+                <ResultCard title="결국 해야 할 일">
                   <ul className="action-list">
                     {result.actions.map((a) => (
                       <li key={a}>{a}</li>
                     ))}
                   </ul>
+                </ResultCard>
+              )}
+
+              {/* 추천 답장이 있으면 별도 카드로 보여주기 (프론트가 기대하는 데이터가 있을 때만) */}
+              {result.recommendation && (
+                <ResultCard title="추천 답장">
+                  <div className="recommendation">
+                    <pre>{result.recommendation}</pre>
+                    <button
+                      className="btn-copy"
+                      onClick={() => {
+                        navigator.clipboard.writeText(result.recommendation).then(() => {
+                          // small visual feedback
+                          alert('복사됨')
+                        }).catch(() => {})
+                      }}
+                    >복사하기</button>
+                  </div>
                 </ResultCard>
               )}
             </div>
