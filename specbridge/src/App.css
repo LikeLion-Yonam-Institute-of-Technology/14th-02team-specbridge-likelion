@@ -130,6 +130,23 @@ button,textarea,select,input{font:inherit}
 .easy{margin:0;color:var(--text-secondary);line-height:1.6}
 .error-message{color:#dc2626;font-size:14px;margin-top:8px;display:block;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px}
 
+/* URL page translation */
+.page-translate-page{max-width:1100px;margin-top:18px}
+.url-form{display:flex;gap:12px;align-items:flex-end;max-width:900px}
+.url-form .control{flex:1}
+.url-input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#0f1724}
+.url-input:focus{outline:2px solid rgba(79,70,229,0.18);border-color:#c7d2fe}
+.loading-spinner{display:inline-block;width:15px;height:15px;margin-right:8px;border:2px solid rgba(255,255,255,0.45);border-top-color:#fff;border-radius:50%;vertical-align:-2px;animation:page-translate-spin 0.7s linear infinite}
+@keyframes page-translate-spin{to{transform:rotate(360deg)}}
+.page-viewer{position:relative;margin-top:24px;padding:28px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;line-height:1.7}
+.page-viewer-content{max-width:100%;overflow-wrap:anywhere}
+.page-viewer-content img{max-width:100%;height:auto}
+.page-viewer-content a{color:#4338ca;text-decoration:underline}
+.highlight-jargon{color:#3730a3;background:#eef2ff;border-bottom:2px solid #818cf8;border-radius:3px;padding:1px 3px;cursor:help}
+.jargon-tooltip{position:fixed;z-index:100;background:#111827;color:#fff;max-width:280px;padding:10px 12px;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,0.2);font-size:13px;line-height:1.5;pointer-events:none;transform:translate(12px,12px)}
+.page-source{margin:0 0 14px;color:var(--secondary);font-size:13px;overflow-wrap:anywhere}
+@media (max-width:800px){.url-form{flex-direction:column;align-items:stretch}.url-form .action{width:100%}.url-form .btn-primary{width:100%}.page-viewer{padding:18px}}
+
 /* Result page styles */
 .result-header{margin-bottom:24px}
 .btn-retry{background:var(--primary);color:#fff;border:0;padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;box-shadow:0 8px 22px rgba(99,102,241,0.12)}
