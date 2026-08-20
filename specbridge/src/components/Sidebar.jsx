@@ -7,6 +7,7 @@ const items = [
   { to: '/translate', label: '전문어 번역' },
   { to: '/meeting', label: '회의 요약' },
   { to: '/proposal', label: '기획안 요약' },
+  { to: '/page-translate', label: '페이지 번역' },
   { to: '/settings', label: '설정' },
 ]
 

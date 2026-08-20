@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import OpenAI from 'openai'
 import { z } from 'zod'
 import { zodTextFormat } from 'openai/helpers/zod'
+import * as cheerio from 'cheerio'
 
 dotenv.config()
 
@@ -66,6 +67,79 @@ const ProposalSchema = z.object({
   questions: z.array(z.string()).default([]),
   gaps: z.array(z.string()).default([]),
 })
+
+const PageJargonSchema = z.object({
+  terms: z.array(
+    z.object({
+      term: z.string().min(1),
+      explanation: z.string().min(1),
+    }),
+  ).default([]),
+})
+
+const FALLBACK_PAGE_TERMS = [
+  { term: 'API', explanation: '서로 다른 프로그램이 데이터를 주고받도록 정해 둔 통신 규칙입니다.' },
+  { term: 'AI', explanation: '사람의 학습과 판단을 컴퓨터가 일부 수행하도록 만든 기술입니다.' },
+  { term: 'LLM', explanation: '대량의 텍스트를 학습해 문장을 이해하고 생성하는 대규모 언어 모델입니다.' },
+  { term: 'UI', explanation: '사용자가 서비스와 직접 보고 조작하는 화면과 구성 요소입니다.' },
+  { term: 'UX', explanation: '사용자가 서비스를 이용하며 느끼는 전체 경험입니다.' },
+  { term: 'HTTP', explanation: '웹 브라우저와 서버가 데이터를 주고받을 때 사용하는 통신 규약입니다.' },
+  { term: '클라우드', explanation: '인터넷을 통해 서버와 저장 공간 같은 컴퓨팅 자원을 사용하는 방식입니다.' },
+]
+
+const extractFallbackPageTerms = (text) => FALLBACK_PAGE_TERMS.filter(({ term }) => {
+  const boundary = '(?<![\\p{L}\\p{N}])'
+  return new RegExp(`${boundary}${term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu').test(text)
+})
+
+const extractPageTerms = async (text) => {
+  if (!process.env.OPENAI_API_KEY?.trim()) return extractFallbackPageTerms(text)
+
+  try {
+    const parsed = await createStructuredResponse({
+      schema: PageJargonSchema,
+      systemPrompt: `당신은 웹페이지 전문용어 분석 전문가입니다.
+- 본문에 실제로 등장한 전문용어만 최대 20개 추출하세요.
+- 각 용어를 비전공자가 이해할 수 있는 한국어 한두 문장으로 설명하세요.
+- 전문용어가 없으면 terms를 빈 배열로 반환하세요.`,
+      userText: `웹페이지 본문:\n${text.slice(0, 12000)}`,
+      outputName: 'page_jargon_result',
+    })
+    return parsed.terms ?? []
+  } catch (error) {
+    console.error('Page jargon extraction fallback:', error)
+    return extractFallbackPageTerms(text)
+  }
+}
+
+const escapeHtmlAttribute = (value) => String(value)
+  .replaceAll('&', '&amp;')
+  .replaceAll('"', '&quot;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+
+const highlightPageTerms = (html, terms) => {
+  const $ = cheerio.load(html, { decodeEntities: false })
+  $('script, style, noscript, template').remove()
+  const termPattern = terms
+    .slice()
+    .sort((a, b) => b.term.length - a.term.length)
+    .map(({ term, explanation }) => ({
+      term,
+      explanation,
+      pattern: new RegExp(`(?<![\\p{L}\\p{N}])${term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'giu'),
+    }))
+
+  $('body *').contents().filter((_, node) => node.type === 'text').each((_, node) => {
+    let content = node.data
+    for (const { term, explanation, pattern } of termPattern) {
+      content = content.replace(pattern, (matched) => `<span class="highlight-jargon" data-explanation="${escapeHtmlAttribute(explanation)}">${escapeHtmlAttribute(matched)}</span>`)
+    }
+    if (content !== node.data) $(node).replaceWith(content)
+  })
+
+  return $('body').html() ?? $.html()
+}
 
 const buildProposalPrompt = () => `당신은 한국어로 기획서를 검토하고 요약하는 전문가입니다.
 - 반드시 JSON 형식으로만 응답하세요.
@@ -376,6 +450,52 @@ app.post('/api/analyze', async (req, res) => {
     console.error('Error in /api/analyze:', error)
     const result = buildOpenAIErrorResponse(error, '분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     return res.status(result.status).json(result.payload)
+  }
+})
+
+app.post('/api/analyze-url', async (req, res) => {
+  try {
+    const { url } = req.body ?? {}
+    if (typeof url !== 'string' || !url.trim()) {
+      return res.status(400).json({ error: '웹페이지 URL을 입력해주세요.' })
+    }
+
+    let targetUrl
+    try {
+      targetUrl = new URL(url.trim())
+    } catch {
+      return res.status(400).json({ error: '올바른 URL을 입력해주세요.' })
+    }
+
+    if (!['http:', 'https:'].includes(targetUrl.protocol)) {
+      return res.status(400).json({ error: 'http 또는 https URL만 분석할 수 있습니다.' })
+    }
+
+    const pageResponse = await fetch(targetUrl, {
+      headers: { 'User-Agent': 'SpecBridge/1.0' },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!pageResponse.ok) {
+      return res.status(502).json({ error: `웹페이지를 가져오지 못했습니다. (${pageResponse.status})` })
+    }
+
+    const html = await pageResponse.text()
+    const $ = cheerio.load(html)
+    $('script, style, noscript, template').remove()
+    const pageText = $('body').text().replace(/\s+/g, ' ').trim()
+    const terms = await extractPageTerms(pageText)
+
+    return res.json({
+      sourceUrl: targetUrl.toString(),
+      html: highlightPageTerms(html, terms),
+      terms,
+    })
+  } catch (error) {
+    console.error('Error in /api/analyze-url:', error)
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      return res.status(504).json({ error: '웹페이지 응답 시간이 초과되었습니다.' })
+    }
+    return res.status(502).json({ error: '웹페이지 분석 중 서버 오류가 발생했습니다.' })
   }
 })
 
